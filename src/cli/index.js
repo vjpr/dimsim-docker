@@ -1,3 +1,4 @@
+require('dotenv').config({silent: true})
 import {spawnSync} from 'child_process'
 import path, {join} from 'path'
 import _ from 'lodash'
@@ -33,7 +34,14 @@ export default function() {
     .command('docker-shell', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
       runDockerShell = true
     })
-    .command('docker-clean', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
+    .command('docker-ps', 'Show all running containers.', (yargs) => {
+      const cmd = 'docker ps'
+      console.log('Running:', cmd)
+      const out = execa.shellSync(cmd)
+      console.log(out.stdout)
+      exit()
+    })
+    .command('docker-clean', 'Remove all containers. Useful if something gets stuck.', (yargs) => {
       // TODO(vjpr): Figure out a cross-platform command.
       // TODO(vjpr): Add error handling.
       const cmd = 'docker rm -f $(docker ps -a -q)'
@@ -80,10 +88,17 @@ export default function() {
     }
   }
 
+  // TODO(vjpr): Convert to function.
   // Whilst developing dimsim we must point to our dev dimsim repo.
   let dimsimSrc = dockerOpts['dimsim-src'] || process.env.DIMSIM_SRC
-  dimsimSrc = untildify(dimsimSrc)
   if (dimsimSrc) {
+    console.log(`Running in dev mode. Using a shared volume for dimsim src running in Docker container.`)
+    if (process.env.DIMSIM_SRC) {
+      console.log(`From env var: DIMSIM_SRC=${dimsimSrc}`)
+    } else if (dockerOpts['dimsim-src']) {
+      console.log(`From cli: --dimsim-src=${dimsimSrc}`)
+    }
+    dimsimSrc = untildify(dimsimSrc)
     _.mergeWith(flags, {
       volume: {
         values: [
