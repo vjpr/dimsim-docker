@@ -8,7 +8,12 @@ const debug = Debug('dimsim-docker-cli')
 import indentString from 'indent-string'
 import Yargs from 'yargs'
 import untildify from 'untildify'
-import toSpawnArgs from 'object-to-spawn-args'
+import toSpawnArgs from 'modules/to-spawn-args'
+import execa from 'execa'
+
+function mergeArrays(a, b) {
+  return Array.isArray(a) ? _.union(a, b) : undefined
+}
 
 //
 // To debug:
@@ -30,8 +35,11 @@ export default function() {
     })
     .command('docker-clean', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
       // TODO(vjpr): Figure out a cross-platform command.
+      // TODO(vjpr): Add error handling.
       const cmd = 'docker rm -f $(docker ps -a -q)'
-      console.log('Run:', cmd)
+      console.log('Running:', cmd)
+      const out = execa.shellSync(cmd)
+      console.log(out.stdout)
       exit()
     })
     .describe('docker.debug', 'Enable debug logging inside the container.')
@@ -40,8 +48,6 @@ export default function() {
   const argv = yargs.parse(process.argv)
 
   const dockerOpts = argv.docker || {}
-
-  console.log({argv})
 
   if (argv.help || argv._.length <= 2) {
     console.log('='.repeat(80))
@@ -59,41 +65,43 @@ export default function() {
 
   let cmdToRun = process.argv.slice(2)
 
-  //let flags = {
-  //  interactive: true,
-  //  tty: true,
-  //  rm: true,
-  //  // This is used for mapping the real path.
-  //  env: 'DIMSIM_CODE_HOST_PWD=$PWD'
-  //}
-
-  let flagsStr = [
-    '--interactive --tty --rm',
+  let flags = {
+    interactive: true,
+    tty: true,
+    rm: true,
     // This is used for mapping the real path.
-    '--env DIMSIM_CODE_HOST_PWD=$PWD',
-    '--volume $PWD:/code',
-    '--volume /var/run/docker.sock:/var/run/docker.sock',
-    '--volume /tmp/dimsim:/tmp/dimsim',
-  ]
+    env: 'DIMSIM_CODE_HOST_PWD=$PWD',
+    volume: {
+      values: [
+        '$PWD:/code',
+        '/var/run/docker.sock:/var/run/docker.sock',
+        '/tmp/dimsim:/tmp/dimsim',
+      ],
+    }
+  }
 
   // Whilst developing dimsim we must point to our dev dimsim repo.
   let dimsimSrc = dockerOpts['dimsim-src'] || process.env.DIMSIM_SRC
   dimsimSrc = untildify(dimsimSrc)
   if (dimsimSrc) {
-    flagsStr = flagsStr.concat([
-      `--volume ${dimsimSrc}:/home/app/current`,
-      `--volume dimsim-node_modules:/home/app/current/node_modules`,
-    ])
+    _.mergeWith(flags, {
+      volume: {
+        values: [
+          `${dimsimSrc}:/home/app/current`,
+          `dimsim-node_modules:/home/app/current/node_modules`,
+        ]
+      }
+    }, mergeArrays)
   }
 
   if (runDockerShell) {
-    flagsStr.push('--entrypoint=/bin/bash')
+    flags.entrypoint = '/bin/bash'
     cmdToRun = null
   }
 
   let argsStr = [
     'run',
-    flagsStr,
+    toSpawnArgs(flags),
     image,
     cmdToRun,
   ]
