@@ -8,6 +8,7 @@ const debug = Debug('dimsim-docker-cli')
 import indentString from 'indent-string'
 import Yargs from 'yargs'
 import untildify from 'untildify'
+import toSpawnArgs from 'object-to-spawn-args'
 
 //
 // To debug:
@@ -20,15 +21,27 @@ export default function() {
   // TODO(vjpr): Check that Docker for Windows is installed. Offer to open
   //   browser to install page.
 
+  let runDockerShell = false
+
   const yargs = Yargs
     .usage('Usage: $0 <command> [options]')
-    .describe('docker.shell', 'Open /bin/bash in the Docker container for debugging.')
+    .command('docker-shell', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
+      runDockerShell = true
+    })
+    .command('docker-clean', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
+      // TODO(vjpr): Figure out a cross-platform command.
+      const cmd = 'docker rm -f $(docker ps -a -q)'
+      console.log('Run:', cmd)
+      exit()
+    })
     .describe('docker.debug', 'Enable debug logging inside the container.')
     .describe('docker.dimsim-src', 'Path to the dimsim working dir for use during dimsim development.')
     .describe('help', 'Show dimsim-docker-cli and dimsim help.')
   const argv = yargs.parse(process.argv)
 
   const dockerOpts = argv.docker || {}
+
+  console.log({argv})
 
   if (argv.help || argv._.length <= 2) {
     console.log('='.repeat(80))
@@ -45,6 +58,14 @@ export default function() {
   const cmd = 'docker'
 
   let cmdToRun = process.argv.slice(2)
+
+  //let flags = {
+  //  interactive: true,
+  //  tty: true,
+  //  rm: true,
+  //  // This is used for mapping the real path.
+  //  env: 'DIMSIM_CODE_HOST_PWD=$PWD'
+  //}
 
   let flagsStr = [
     '--interactive --tty --rm',
@@ -65,8 +86,7 @@ export default function() {
     ])
   }
 
-  const dockerShell = dockerOpts.shell || parseInt(process.env.DIMSIM_DOCKER_SHELL)
-  if (dockerShell) {
+  if (runDockerShell) {
     flagsStr.push('--entrypoint=/bin/bash')
     cmdToRun = null
   }

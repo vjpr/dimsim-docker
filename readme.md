@@ -1,7 +1,7 @@
 # dimsim-docker-cli
 
 > CLI tool to conveniently run a Dimsim Docker container.
- 
+
 ## Install
 
 ```
@@ -9,6 +9,8 @@ npm i -g dimsim-docker-cli
 ```
  
 ## Usage
+
+This should be run from the Docker *host* OS. It is only neccessary to use this wrapper on Windows. For macOS and Linux you can use `dimsim` directly.
 
 ```
 dimsim-docker
