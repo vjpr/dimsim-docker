@@ -5,12 +5,12 @@ import _ from 'lodash'
 import pkgConf from 'pkg-conf'
 import exit from 'exit'
 import Debug from 'debug'
-const debug = Debug('dimsim-docker-cli')
 import indentString from 'indent-string'
 import Yargs from 'yargs'
 import untildify from 'untildify'
 import toSpawnArgs from 'modules/to-spawn-args'
 import execa from 'execa'
+const debug = Debug('dimsim-docker-cli')
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -99,6 +99,7 @@ export default function() {
         //'/tmp/dimsim:/tmp/dimsim',
       ],
     },
+    // Default gdb server port. QEMU run gdbserver.
     p: '1234:1234',
   }
 
@@ -114,6 +115,7 @@ export default function() {
     }
     console.log(logStr)
     dimsimSrc = untildify(dimsimSrc)
+    const appNodeModulesInDocker = '/home/app/current/node_modules'
     _.mergeWith(flags, {
       env: {
         values: [`DIMSIM_SRC=${dimsimSrc}`],
@@ -121,10 +123,16 @@ export default function() {
       volume: {
         values: [
           `${dimsimSrc}:/home/app/current`,
-          `dimsim-node_modules:/home/app/current/node_modules`,
+          `dimsim-node_modules:${appNodeModulesInDocker}`,
         ]
       }
     }, mergeArrays)
+
+    // TODO(vjpr): Get from cli.
+    //const npmLinkedModules = ['@quantitec/dimsim-intranav']
+    //const dimsimSrcDir = dimsimSrc
+    //useVolumesForNpmLinkedModules({flags, npmLinkedModules, dimsimSrcDir, appNodeModulesInDocker})
+
   }
 
   if (runDockerShell) {
@@ -177,4 +185,15 @@ function replaceEnvVars(str) {
     return process.env[match]
   })
   return replaced
+}
+
+function useVolumesForNpmLinkedModules({flags, npmLinkedModules, dimsimSrcDir, appNodeModulesInDocker}) {
+  const basedir = dimsimSrcDir
+  // Find full paths for npm linked modules.
+  const resolvedPaths = npmLinkedModules.map(p => {
+    const resolvedPath = join(basedir, 'node_modules', p)
+    const dockerPath = join(appNodeModulesInDocker, p)
+    return `${resolvedPath}:${dockerPath}`
+  })
+  _.mergeWith(flags, {volume: {values: resolvedPaths}}, mergeArrays)
 }
