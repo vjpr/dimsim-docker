@@ -12,6 +12,15 @@ import untildify from 'untildify'
 import toSpawnArgs from 'modules/to-spawn-args'
 import execa from 'execa'
 
+////////////////////////////////////////////////////////////////////////////////
+
+process.on('unhandledRejection', (e) => {
+  console.error('error:', e)
+  exit()
+})
+
+////////////////////////////////////////////////////////////////////////////////
+
 function mergeArrays(a, b) {
   return Array.isArray(a) ? _.union(a, b) : undefined
 }
@@ -78,28 +87,37 @@ export default function() {
     tty: true,
     rm: true,
     // This is used for mapping the real path.
-    env: 'DIMSIM_CODE_HOST_PWD=$PWD',
+    env: {
+      values: ['DIMSIM_CODE_HOST_PWD=$PWD'],
+    },
     volume: {
       values: [
         '$PWD:/code',
-        '/var/run/docker.sock:/var/run/docker.sock',
-        '/tmp/dimsim:/tmp/dimsim',
+        // Would not support Windows I don't think.
+        //'/var/run/docker.sock:/var/run/docker.sock',
+        // Do we need this? This is where we are storing pipes in the container.
+        //'/tmp/dimsim:/tmp/dimsim',
       ],
-    }
+    },
+    p: '1234:1234',
   }
 
   // TODO(vjpr): Convert to function.
   // Whilst developing dimsim we must point to our dev dimsim repo.
   let dimsimSrc = dockerOpts['dimsim-src'] || process.env.DIMSIM_SRC
   if (dimsimSrc) {
-    console.log(`Running in dev mode. Using a shared volume for dimsim src running in Docker container.`)
+    let logStr = `Running in dev mode. Using a shared volume for dimsim src running in Docker container. `
     if (process.env.DIMSIM_SRC) {
-      console.log(`From env var: DIMSIM_SRC=${dimsimSrc}`)
+      logStr += `From env var: DIMSIM_SRC=${dimsimSrc}`
     } else if (dockerOpts['dimsim-src']) {
-      console.log(`From cli: --dimsim-src=${dimsimSrc}`)
+      logStr += `From cli: --dimsim-src=${dimsimSrc}`
     }
+    console.log(logStr)
     dimsimSrc = untildify(dimsimSrc)
     _.mergeWith(flags, {
+      env: {
+        values: [`DIMSIM_SRC=${dimsimSrc}`],
+      },
       volume: {
         values: [
           `${dimsimSrc}:/home/app/current`,
