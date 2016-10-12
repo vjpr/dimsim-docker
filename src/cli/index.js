@@ -1,4 +1,4 @@
-require('dotenv').config({silent: true})
+const dotenvConfig = require('dotenv').config({silent: true})
 import {spawnSync} from 'child_process'
 import path, {join} from 'path'
 import _ from 'lodash'
@@ -66,6 +66,8 @@ export default function() {
 
   const dockerOpts = argv.docker || {}
 
+  console.log('NOTE: This cli tool will be run inside a Docker container')
+
   if (argv.help || argv._.length <= 2) {
     console.log('='.repeat(80))
     console.log('Docker Wrapper (dimsim-docker-cli) Help\n')
@@ -82,6 +84,7 @@ export default function() {
 
   let cmdToRun = process.argv.slice(2)
 
+  // TODO(vjpr): Rename to run flags.
   let flags = {
     interactive: true,
     tty: true,
@@ -107,9 +110,10 @@ export default function() {
   // Whilst developing dimsim we must point to our dev dimsim repo.
   let dimsimSrc = dockerOpts['dimsim-src'] || process.env.DIMSIM_SRC
   if (dimsimSrc) {
-    let logStr = `Running in dev mode. Using a shared volume for dimsim src running in Docker container. `
+    let logStr = `Running in dev mode. Using a shared volume for dimsim src running in Docker container.\n`
     if (process.env.DIMSIM_SRC) {
-      logStr += `From env var: DIMSIM_SRC=${dimsimSrc}`
+      logStr += `From env var: DIMSIM_SRC=${dimsimSrc}.`
+      if (dotenvConfig.DIMSIM_SRC) logStr += ` Set in the ${`.env`} file.`
     } else if (dockerOpts['dimsim-src']) {
       logStr += `From cli: --dimsim-src=${dimsimSrc}`
     }
@@ -129,7 +133,7 @@ export default function() {
     }, mergeArrays)
 
     // TODO(vjpr): Get from cli.
-    //const npmLinkedModules = ['@quantitec/dimsim-intranav']
+    //const npmLinkedModules = ['zog']
     //const dimsimSrcDir = dimsimSrc
     //useVolumesForNpmLinkedModules({flags, npmLinkedModules, dimsimSrcDir, appNodeModulesInDocker})
 
@@ -137,6 +141,8 @@ export default function() {
 
   if (runDockerShell) {
     flags.entrypoint = '/bin/bash'
+    // Otherwise we can't play around with `apt-get install`, etc.
+    flags.user = 'root'
     cmdToRun = null
   }
 
