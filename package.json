@@ -1,5 +1,5 @@
 {
-  "name": "dimsim-docker-cli",
+  "name": "dimsim-docker",
   "version": "0.0.0",
   "description": "> CLI tool to conveniently run a Dimsim Docker container.",
   "keywords": [],
