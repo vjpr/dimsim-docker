@@ -1,22 +1,24 @@
-# dimsim-docker-cli
+# dimsim-docker
 
-> CLI tool to conveniently run a Dimsim Docker container.
+CLI tool to conveniently run a Dimsim Docker container.
 
 ## Install
 
-```
-npm i -g dimsim-docker-cli 
+```bash
+npm i -g dimsim-docker
 ```
  
 ## Usage
 
-This should be run from the Docker *host* OS. It is only neccessary to use this wrapper on Windows. For macOS and Linux you can use `dimsim` directly.
+This should be run from the Docker *host* OS. It is only neccessary to use this wrapper on Windows when using the simulator. For macOS and Linux you can use `dimsim` directly.
 
-```
-dimsim-docker
+```bash
+dimsim-docker <command>
 ```
 
-See `dimsim` project for cli options.
+Running `dimsim-docker help` will show you help for `dimsim-docker` and also `dimsim`.
+
+See [Dimsim](https://github.com/quantitec/dimsim) project for more info.
 
 ## Why?
 
@@ -28,12 +30,20 @@ To allow Docker to access our test code residing on the host, we need to run doc
 
 ### Why isn't this bundled in `dimsim`?
 
-NPM sucks on Windows so we don't want to install any dependencies on Windows that we don't have to. Therefore this needs to be a separate module. Native dependencies also need to be compiled for Debian inside Docker.
+NPM sucks on Windows so we don't want to install any dependencies on Windows that we don't have to. Therefore this needs to be a separate module. Native dependencies also need to be compiled for POSIX inside Docker.
 
 ## Development
 
-```
-pnpm install # add `--no-optional` on Windows 
+```bash
+pnpm install # add `--no-optional` on Windows
 gulp watch
-node . --help
+node . help
 ```
+
+## Author
+
+[Vaughan Rouesnel - @vjpr](https://github.com/vjpr)
+
+## License
+
+MIT
