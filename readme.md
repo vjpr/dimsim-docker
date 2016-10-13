@@ -29,3 +29,11 @@ To allow Docker to access our test code residing on the host, we need to run doc
 ### Why isn't this bundled in `dimsim`?
 
 NPM sucks on Windows so we don't want to install any dependencies on Windows that we don't have to. Therefore this needs to be a separate module. Native dependencies also need to be compiled for Debian inside Docker.
+
+## Development
+
+```
+pnpm install # add `--no-optional` on Windows 
+gulp watch
+node . --help
+```

@@ -1,5 +1,5 @@
 const dotenvConfig = require('dotenv').config({silent: true})
-import {spawnSync} from 'child_process'
+import {spawnSync, spawn} from 'child_process'
 import path, {join} from 'path'
 import _ from 'lodash'
 import pkgConf from 'pkg-conf'
@@ -10,7 +10,11 @@ import Yargs from 'yargs'
 import untildify from 'untildify'
 import toSpawnArgs from 'modules/to-spawn-args'
 import execa from 'execa'
+import os from 'os'
+import slash from 'slash'
 const debug = Debug('dimsim-docker-cli')
+
+const isWindows = os.platform() === 'win32'
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -33,10 +37,16 @@ function mergeArrays(a, b) {
 
 export default function() {
 
+  let dockerCmd = 'run'
+
+  // TODO(vjpr): Make configurable.
+  const testsDir = 'simulator'
+
   // TODO(vjpr): Check that Docker for Windows is installed. Offer to open
   //   browser to install page.
 
   let runDockerShell = false
+  let runDockerTestsInstall = false
 
   const yargs = Yargs
     .usage('Usage: $0 <command> [options]')
@@ -49,6 +59,10 @@ export default function() {
       const out = execa.shellSync(cmd)
       console.log(out.stdout)
       exit()
+    })
+    .command('docker-tests-install', 'When you add a new dependency to the `simulator` dir you must install it.', (yargs) => {
+      // When running from Windows, you must run npm install from Docker or it hangs. Probably an error that is not showing somewhere about file paths.
+      runDockerTestsInstall = true
     })
     .command('docker-clean', 'Remove all containers. Useful if something gets stuck.', (yargs) => {
       // TODO(vjpr): Figure out a cross-platform command.
@@ -78,10 +92,18 @@ export default function() {
   const config = getConfig()
 
   const image = getDockerImage(config)
-  if (!image) return
+  if (!image) {
+    console.error('A Docker image must be specified in your package.json.')
+    return
+  }
+
+  console.log('Using Docker image:', image)
 
   const cmd = 'docker'
 
+  // Gets the commands to parse to dimsim.
+  // E.g. node dimsim-docker <dimsim-commands...>
+  // This will be an array.
   let cmdToRun = process.argv.slice(2)
 
   // TODO(vjpr): Rename to run flags.
@@ -91,16 +113,21 @@ export default function() {
     rm: true,
     // This is used for mapping the real path.
     env: {
+      // TODO(vjpr): What is this for...does it need to be "slashed" properly.
+      // I think it is just for printing paths correctly.
       values: ['DIMSIM_CODE_HOST_PWD=$PWD'],
     },
     volume: {
       values: [
-        '$PWD:/code',
+        // TODO(vjpr): Maybe need to name the named volume after the package.json.
+        // TODO(vjpr): `simulator` should be parametized.
+        //isWindows ? `dimsim-project-node_modules:/code/${testsDir}/node_modules` : null,
+        isWindows ? `/${slash(process.cwd()).replace('C:', 'c')}:/code` : '$PWD:/code',
         // Would not support Windows I don't think.
         //'/var/run/docker.sock:/var/run/docker.sock',
         // Do we need this? This is where we are storing pipes in the container.
         //'/tmp/dimsim:/tmp/dimsim',
-      ],
+      ].filter(Boolean),
     },
     // Default gdb server port. QEMU run gdbserver.
     p: '1234:1234',
@@ -126,6 +153,7 @@ export default function() {
       },
       volume: {
         values: [
+          // TODO(vjpr): Have to slash properly on Windows.
           `${dimsimSrc}:/home/app/current`,
           `dimsim-node_modules:${appNodeModulesInDocker}`,
         ]
@@ -146,15 +174,25 @@ export default function() {
     cmdToRun = null
   }
 
+  if (runDockerTestsInstall) {
+    //dockerCmd = 'exec'
+    flags.entrypoint = `/bin/bash`
+    //flags.user = 'root'
+    cmdToRun =  [`-c`, `cd /code/${testsDir} && npm install`]
+    console.log('Running in Docker container:', cmdToRun)
+  }
+
   let argsStr = [
-    'run',
+    dockerCmd,
     toSpawnArgs(flags),
     image,
-    cmdToRun,
   ]
 
   let args = _(argsStr).castArray().flatten().value().join(' ')
     .replace(/\s\s+/g, ' ').split(' ').filter(Boolean)
+
+  // We set cmdToRun here so we don't split things we don't want to split like `-c yo yo`.
+  args = args.concat(cmdToRun)
 
   let fullCmdStr = `${cmd} ${args.join(' ')}`
 
@@ -165,10 +203,18 @@ export default function() {
   debug('spawn cmd:', cmd)
   debug('spawn args:', args)
 
-  const proc = spawnSync(cmd, args, {
+  const proc = spawn(cmd, args, {
     stdio: 'inherit',
-    detached: true,
+    // Must use `detached: false` on Windows.
+    // TODO(vjpr): Investigate the ideal setting.
+    detached: isWindows ? false : true,
   })
+
+  // Listen for errors here.
+  // If the entry point is messed up errors won't be reported.
+
+  //proc.stdout.on('data', d => console.log('docker stdout:', d))
+  //proc.stderr.on('data', d => console.error('docker stderr:', d))
 
 }
 
