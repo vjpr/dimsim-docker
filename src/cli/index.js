@@ -60,10 +60,13 @@ export default function() {
       console.log(out.stdout)
       exit()
     })
-    .command('docker-tests-install', 'When you add a new dependency to the `simulator` dir you must install it.', (yargs) => {
-      // When running from Windows, you must run npm install from Docker or it hangs. Probably an error that is not showing somewhere about file paths.
-      runDockerTestsInstall = true
-    })
+    .command('docker-tests-install', 'When you add a new dependency to the `simulator` dir you must install it.',
+      (yargs) => {
+        return yargs.describe('bin', 'Which app to use for running the install. E.g. npm, pnpm, ied, etc.')
+      }, (argv) => {
+        // When running from Windows, you must run npm install from Docker or it hangs. Probably an error that is not showing somewhere about file paths.
+        runDockerTestsInstall = true
+      })
     .command('docker-clean', 'Remove all containers. Useful if something gets stuck.', (yargs) => {
       // TODO(vjpr): Figure out a cross-platform command.
       // TODO(vjpr): Add error handling.
@@ -176,9 +179,10 @@ export default function() {
 
   if (runDockerTestsInstall) {
     //dockerCmd = 'exec'
+    const npmBin = argv.bin || 'npm'
     flags.entrypoint = `/bin/bash`
     //flags.user = 'root'
-    cmdToRun =  [`-c`, `cd /code/${testsDir} && npm install`]
+    cmdToRun = [`-c`, `cd /code/${testsDir} && ${npmBin} install`]
     console.log('Running in Docker container:', cmdToRun)
   }
 
@@ -188,11 +192,17 @@ export default function() {
     image,
   ]
 
-  let args = _(argsStr).castArray().flatten().value().join(' ')
-    .replace(/\s\s+/g, ' ').split(' ').filter(Boolean)
+  let args = _(argsStr)
+    .castArray()
+    .flatten()
+    .value()
+    .join(' ')
+    .replace(/\s\s+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
 
   // We set cmdToRun here so we don't split things we don't want to split like `-c yo yo`.
-  args = args.concat(cmdToRun)
+  args = args.concat(cmdToRun).filter(Boolean)
 
   let fullCmdStr = `${cmd} ${args.join(' ')}`
 
