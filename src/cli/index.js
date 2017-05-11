@@ -60,6 +60,8 @@ export default function() {
       console.log(out.stdout)
       exit()
     })
+    // TODO(vjpr): Maybe we need a command to `pnpm i` the project deps so native deps have Linux-linked binaries.
+    //   This would only be the case if we used node tooling in the project's package.json, as most packages we use are just cpp code.
     .command('docker-tests-install', 'When you add a new dependency to the `simulator` dir you must install it.',
       (yargs) => {
         return yargs.describe('bin', 'Which app to use for running the install. E.g. npm, pnpm, ied, etc.')
