@@ -48,8 +48,10 @@ export default function() {
   let runDockerShell = false
   let runDockerTestsInstall = false
 
+  const bin = 'dimsim-docker'
+
   const yargs = Yargs
-    .usage('Usage: $0 <command> [options]')
+    .usage(`Usage: ${bin} <command> [options]`)
     .command('docker-shell', 'Open /bin/bash in the Docker container for debugging.', (yargs) => {
       runDockerShell = true
     })
@@ -184,6 +186,7 @@ export default function() {
     const npmBin = argv.bin || 'npm'
     flags.entrypoint = `/bin/bash`
     //flags.user = 'root'
+    // TODO(vjpr): We might need to clear node_modules manually sometimes because we use a volume container.
     cmdToRun = [`-c`, `cd /code/${testsDir} && ${npmBin} install`]
     console.log('Running in Docker container:', cmdToRun)
   }

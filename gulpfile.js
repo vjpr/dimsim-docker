@@ -1,2 +1,2 @@
-var gulp = require('gulp')
+var gulp = require('gulp4')
 require('babelator')(gulp)

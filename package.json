@@ -38,8 +38,8 @@
   "devDependencies": {
     "babel-register": "^6.0.0",
     "babel-preset-live": "^0.1.0",
-    "babelator": "^0.2.21",
-    "gulp": "gulpjs/gulp.git#4.0"
+    "babelator": "^0.2.26",
+    "gulp4": "*"
   },
   "bundledDependencies": [
     "babel-runtime",
