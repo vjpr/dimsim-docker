@@ -41,10 +41,6 @@
     "babelator": "^0.2.26",
     "gulp4": "*"
   },
-  "bundledDependencies": [
-    "babel-runtime",
-    "lodash"
-  ],
   "shipmate": {
     "skip": [
       "lint"
