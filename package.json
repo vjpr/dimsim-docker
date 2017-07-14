@@ -23,7 +23,7 @@
     "node": "^6.0.0"
   },
   "dependencies": {
-    "babel-runtime": "^6.0.0",
+    "babel-runtime": "^6.23.0",
     "debug": "^2.2.0",
     "dotenv": "^2.0.0",
     "execa": "^0.4.0",
@@ -36,8 +36,8 @@
     "yargs": "^6.0.0"
   },
   "devDependencies": {
-    "babel-register": "^6.0.0",
     "babel-preset-live": "^0.1.0",
+    "babel-register": "^6.24.1",
     "babelator": "^0.2.26",
     "gulp4": "*"
   },
